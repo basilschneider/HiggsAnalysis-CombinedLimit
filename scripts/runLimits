@@ -2,6 +2,9 @@
 
 # Make limits from datacards for SUSY Upgrade study
 
+# TODO: Record commands with set -v, instead of duplicating them (once for
+# redirecting to the log file and once for invoking it)
+
 #dirCards=/uscms_data/d3/bschneid/analysis/upgrade/CMSSW_8_0_25/src/CMGTools/TTHAnalysis/python/plotter/susy-upgrade/cards/
 dirCards="${PWD}"/cards/
 dirPlots=./limits/
@@ -36,20 +39,39 @@ for pathpoint in "${dirCards}"/combinedcard_*txt; do
     pointNewY="${pointOld##*_}"
     pointNewDm="$(( ${pointNewX} - ${pointNewY} ))"
     pointNew="${pointNew}_${pointNewDm}"
-    echo "Running higgs combine on point ${pointNew} (a.k.a. ${pointOld})."
+    logLim=logs/limit_"${pointNew##*/}".txt
+    logSig=logs/significance_"${pointNew##*/}".txt
+    echo "Calculating asymptotic limits for point ${pointNew} (a.k.a. ${pointOld})." \
+        | tee "${logLim}"
+    echo "Command: combine --run blind -M AsymptoticLimits -n ${pointNew} ${pathpoint}" \
+        &>> "${logLim}"
+    #set -v
     combine \
         --run blind \
         -M AsymptoticLimits \
         -n "${pointNew}" \
-        -S 0 \
         "${pathpoint}" \
-        &> logs/limit_"${pointNew##*/}".txt
+        &>> "${logLim}"
+    #set +v
     mv "higgsCombine"${pointNew}".AsymptoticLimits.mH120.root" "limit_"${pointNew}".root"
     MODEL=$(echo "${pointNew}"|awk -F- 'split($1,a,"_")&&$0=a[1]') #because awk
     MASS1=$(echo "${pointNew}"|awk -F- 'split($1,a,"_")&&$0=a[2]')
     MASS2=$(echo "${pointNew}"|awk -F- 'split($1,a,"_")&&$0=a[3]')
-    root -l -b -q "make_rValues.C(\"$MODEL\",$MASS1,$MASS2)" &>> logs/limit_"${pointNew##*/}".txt
+    root -l -b -q "make_rValues.C(\"$MODEL\",$MASS1,$MASS2)" &>> "${logLim}"
     mv r-values_S.root rval_"${pointNew##*/}".root
+
+    # Significance
+    echo "Calculating significance for point ${pointNew} (a.k.a. ${pointOld})." \
+        | tee "${logSig}"
+    echo "Command: combine -M Significance -t -1 --expectSignal=1 -n sig_${pointNew} ${pathpoint}" \
+        &>> "${logSig}"
+    combine \
+        -M Significance \
+        -t -1 \
+        --expectSignal=1 \
+        -n sig_"${pointNew}" \
+        "${pathpoint}" \
+        &> logs/significance_"${pointNew##*/}".txt
 done
 
 #root -l -b -q makeLimitTable.C > table.txt 2>&1
