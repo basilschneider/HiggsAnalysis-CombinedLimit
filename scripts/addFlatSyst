@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
 
 for card in cards/*; do
-    echo "flatBgSyst lnN 1.1 1.1 1.3 1.1 1.3" >> "${card}"
+    echo "flatBgSyst lnN 1.1 1.1 1.1 1.3 1.1" >> "${card}"
 done

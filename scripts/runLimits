@@ -13,8 +13,6 @@ rm -rf "${dirPlots}"
 rm -f "${dirCards}"/combinedcard_*
 mkdir -p "${dirPlots}"/logs/
 
-./addFlatSyst
-
 # Combine cards
 for point in "${dirCards}"/*lep2met0mll0slep0.txt; do
     echo "Combine cards for ${point}"
@@ -33,7 +31,7 @@ cd "${dirPlots}"
 for pathpoint in "${dirCards}"/combinedcard_*txt; do
     pointOld="${pathpoint##*/combinedcard_}"
     pointOld="${pointOld%_lep2met0mll0slep0.txt}"
-    pointOld="${pointOld%_Delphes_v10}"
+    pointOld="${pointOld%_Delphes_v11}"
     pointNew="${pointOld%_*}"
     pointNewX="${pointNew##*_}"
     pointNewY="${pointOld##*_}"
