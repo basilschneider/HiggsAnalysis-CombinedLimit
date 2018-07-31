@@ -1,0 +1,58 @@
+#!/usr/bin/env bash
+
+# Make limits from datacards for SUSY Upgrade study
+
+#dirCards=/uscms_data/d3/bschneid/analysis/upgrade/CMSSW_8_0_25/src/CMGTools/TTHAnalysis/python/plotter/susy-upgrade/cards/
+dirCards="${PWD}"/cards/
+dirPlots=./limits/
+
+rm -rf "${dirPlots}"
+rm -f "${dirCards}"/combinedcard_*
+mkdir -p "${dirPlots}"/logs/
+
+./addFlatSyst
+
+# Combine cards
+for point in "${dirCards}"/*lep2met0mll0slep0.txt; do
+    echo "Combine cards for ${point}"
+    python combineCards.py \
+        "${point%lep2met0mll0slep0.txt}"lep2met*mll*slep*.txt \
+        > "${dirCards}"/combinedcard_"${point##*/}"
+done
+
+# Copy scripts to output folder
+cp make_rValues.C "${dirPlots}"
+
+# Enter output directory
+pushd .
+cd "${dirPlots}"
+
+for pathpoint in "${dirCards}"/combinedcard_*txt; do
+    pointOld="${pathpoint##*/combinedcard_}"
+    pointOld="${pointOld%_lep2met0mll0slep0.txt}"
+    pointOld="${pointOld%_Delphes_v10}"
+    pointNew="${pointOld%_*}"
+    pointNewX="${pointNew##*_}"
+    pointNewY="${pointOld##*_}"
+    pointNewDm="$(( ${pointNewX} - ${pointNewY} ))"
+    pointNew="${pointNew}_${pointNewDm}"
+    echo "Running higgs combine on point ${pointNew} (a.k.a. ${pointOld})."
+    combine \
+        --run blind \
+        -M AsymptoticLimits \
+        -n "${pointNew}" \
+        -S 0 \
+        "${pathpoint}" \
+        &> logs/limit_"${pointNew##*/}".txt
+    mv "higgsCombine"${pointNew}".AsymptoticLimits.mH120.root" "limit_"${pointNew}".root"
+    MODEL=$(echo "${pointNew}"|awk -F- 'split($1,a,"_")&&$0=a[1]') #because awk
+    MASS1=$(echo "${pointNew}"|awk -F- 'split($1,a,"_")&&$0=a[2]')
+    MASS2=$(echo "${pointNew}"|awk -F- 'split($1,a,"_")&&$0=a[3]')
+    root -l -b -q "make_rValues.C(\"$MODEL\",$MASS1,$MASS2)" &>> logs/limit_"${pointNew##*/}".txt
+    mv r-values_S.root rval_"${pointNew##*/}".root
+done
+
+#root -l -b -q makeLimitTable.C > table.txt 2>&1
+# Clean up
+rm make_rValues.C
+popd
