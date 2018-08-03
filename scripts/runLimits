@@ -70,6 +70,7 @@ for pathpoint in "${dirCards}"/combinedcard_*txt; do
         -n sig_"${pointNew}" \
         "${pathpoint}" \
         &> logs/significance_"${pointNew##*/}".txt
+    mv "higgsCombinesig_"${pointNew}".Significance.mH120.root" "significance_"${pointNew}".root"
 done
 
 #root -l -b -q makeLimitTable.C > table.txt 2>&1
